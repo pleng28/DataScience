@@ -1,0 +1,154 @@
+---
+title: "Midterm Part 2"
+author: "<YOUR NAME HERE>"
+date: "10/30/2017"
+output: html_document
+---
+## You must run the code below:
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Let's consider some data from the Star Wars movies.  Take a look at the data, using summary statistics.
+
+(5 pts.) Make a smaller dataset, starwars2,  including only name, height, mass, species, and homeworld.  Make sure species and homeworld are the last two columns (columns 4 and 5, respectively) of the new data frame.  
+
+```{r}
+library(tidyverse)
+starwars <- read.csv("C:/Users/LHZ/Desktop/RStudio/starwars.csv")
+
+
+starwars2<-starwars%>%mutate(hair_color=NULL,skin_color=NULL,eye_color=NULL, birth_year=NULL, gender=NULL)
+
+as_tibble(starwars2)
+
+
+
+
+
+
+
+
+
+```
+
+I will help you remove all rows that include NAs in either the homeworld or species columns below, but you must remove the remaining NAs in the dataframe, using imputation or removal.  Justify your choice (7 pts.).
+
+```{r}
+## Remove rows with missing values in the homeworld or species columns:
+
+starwars2 <- starwars2[complete.cases(starwars2[4:5]),]
+
+## Now you handle the remaining NAs:
+
+starwars2 <- starwars2[complete.cases(starwars2[2:3]),]
+
+
+as_tibble(starwars2)
+
+##I removed it because mass is meaningless without height
+
+
+```
+
+(4 pts.) Ensure that species and homeworld are formatted as factors:
+
+```{r}
+
+##They are formatted as factors
+
+```
+
+Please answer the following questions using your cleaned dataset:
+
+1) (12) Which homeworld has characters with the greatest mean BMI (define BMI as weight/height for our purposes)?
+
+```{r}
+highestbmi<-starwars2 %>%
+  group_by(homeworld) %>%
+  mutate(BMI=mass/height)%>%
+  summarize(mean_BMI = mean(BMI)) %>%
+  ungroup()
+as_tibble(highestbmi)
+## NAL HUTTA HAS THE HIGHEST MEAN BMI AT 7.76
+
+```
+
+3) (15) Filter out all species except for droids and humans.  Make a scatterplot of mass vs. height, using color to represent the species of the characters.  Plot a smooth curve through the droids points on the scatter plot and another smooth curve through humans data.
+
+```{r}
+
+droids<-starwars2 %>%
+  filter(species == "Droid")
+
+droids<-starwars2 %>%
+  filter(species == "human")
+
+ggplot(data = droids) + geom_point(mapping = aes(x = height, y = weight, color = species)) + geom_smooth(method = "lm")
+ggplot(data = human) + geom_point(mapping = aes(x = height, y = weight, color = species)) + geom_smooth(method = "lm")
+
+
+
+
+
+```
+
+4) (20) Let's consider the "glass.csv" dataset.
+
+```{r}
+## Read in the glass.csv data:
+glass <- read.csv("C:/Users/LHZ/Desktop/RStudio/glass.csv")
+
+
+## The glass data is data collected from forensic investigors.  Analyzing the elements found in glass ##found at a crime scene, they try to classify the type of glass (e.g., window glass, glass from a ##car mirror, etc.).  Using "type" as your outcome variable, (1) create a random forest model from ##the data appropriately, (2) test the model and report the performance, (3) Determine the primary ##factors that contribute to the correct classification of glass found at a crime scene.
+
+
+
+##the primary factors are Type RI and NA
+
+
+
+
+library(randomForest)
+library(C50)
+m<- C5.0(glasstest[-12], glasstest$RI)
+p <- predict(m,glasstest[-12])
+
+m<- randomForest(glasstest[, !names(glasstest) %in% c("RI", "glasstest"))] glasstest$RI, ntree = 500, mtre
+library(gmodels)
+
+library(gmodels)
+CrossTable(credit_test$default, p,
+           prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+           dnn = c('actual default', 'predicted default'))
+
+
+
+
+install.packages("C50")
+library(C50)
+credit_model <- C5.0(credit_glass[-17], credit_glass$default)
+
+# display simple facts about the tree
+credit_model
+
+# display detailed information about the tree
+summary(credit_model)
+
+## Step 4: Evaluating model performance ----
+# create a factor vector of predictions on test data
+credit_pred <- predict(credit_model, credit_test)
+
+# cross tabulation of predicted versus actual classes
+install.packages("gmodels")
+library(gmodels)
+CrossTable(credit_test$default, credit_pred,
+           prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+           dnn = c('actual default', 'predicted default'))
+
+
+
+```
+
+Now, KnitR up, because you're done!

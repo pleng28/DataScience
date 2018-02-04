@@ -1,0 +1,154 @@
+---
+title: 'Assignment #3 Text Analysis'
+author: "<Peter Leng>"
+date: "10/8/2017"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+##install.packages("knitr")
+##install.packages("ggplot2")
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. 
+
+1. ) [10 pts.] Download the works of Sir Arthur Conan Doyle.  Use documentation on the “gutenbergr” package to help with this. 
+
+```{r}
+library(tidytext)
+library(gutenbergr)
+library(dplyr)
+#<YOUR CODE HERE>
+library(stringr)
+gutenberg_works()
+summary(gutenberg_authors)
+
+doyle <- gutenberg_works(author == "Doyle, Arthur Conan") %>%
+gutenberg_download(meta_fields = "title")
+
+```
+
+2.) [15 pts.] Create a plot of the top 15 most relevant words in each book.  Annotate each step of your code.
+
+```{r}
+##install.packages("magrittr")
+library(magrittr)
+##install.packages("gutenbergr")
+library(gutenbergr)
+library(tidytext)
+library(ggplot2)
+library(dplyr)
+
+## The code below takes the dataframe doyle and seperates the words in text into tokens and it does that in each title
+title<- gutenberg_works(author == "Doyle, Arthur Conan") %>%
+gutenberg_download(meta_fields = "title")
+doyle_words <- doyle %>%  unnest_tokens(word, text) %>%
+  count(title, word, sort = TRUE) %>% ungroup()
+doyle_words
+## The code here starts by binding term frequency with inverse document frequency per word in each title and arange them in descending order, and then creates a coloumn of the words in the 10 books of the author listed below
+doyle_words %>% bind_tf_idf(word,title,n) %>% arrange(desc(tf_idf))
+plot_doyle <- doyle_words %>% bind_tf_idf(word, title, n) %>% arrange(desc(tf_idf)) %>%
+  mutate(word = factor(word, levels = rev(unique(word))))%>%
+  mutate(title = factor(title, levels = c("The New Revelation", "The Vital Message", "The Wanderings of a Spiritualist", "The Coming of the Fairies", "The Crime of the Congo", "The Lost World", "The German War", "The Memoirs of Sherlock Holmes", "The Great Boer War", "The Poison Belt")))
+
+library(ggplot2)
+## Draws the plot of the most common 15 words in each book
+
+  plot_doyle %>%
+    group_by(title) %>%
+    top_n(15, tf_idf) %>%
+    ungroup() %>%
+    mutate(word = reorder(word, tf_idf)) %>%
+    ggplot(aes(word, tf_idf, fill = title)) +
+    geom_col(show.legend = FALSE) +
+    labs(x = NULL, y = "tf-idf") +
+    facet_wrap(~title, ncol = 4, scales = "free") +
+    coord_flip()
+
+```
+
+3.) What are the most common streets and manors mentioned in Doyle’s books?  Annotate your code.
+
+```{r}
+library(tidyr)
+
+##Get all the books by Arthur Conan Doyle
+doyle <- gutenberg_works(author == "Doyle, Arthur Conan") %>%
+gutenberg_download(meta_fields = "title")
+
+##Put it into a Bigram
+doyle_bigrams <- doyle %>%
+  unnest_tokens(bigram, text, token = "ngrams", n = 2)
+
+##Count the Bigram
+doyle_bigrams %>%
+  count(bigram, sort = TRUE)
+
+##Seperate the bigram by word1 and word 2
+bigrams_separated <- doyle_bigrams %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+
+##Put in the stop word
+bigrams_filtered <- bigrams_separated %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word)
+
+##Assign word 2 to be street and count it
+bigrams_filtered %>%
+  filter(word2 == "street") %>%
+  count(title, word1, sort = TRUE)
+
+##the most common streets are baker fenchurch and goldlphin
+
+
+##Assign word 2 to be manor and count it
+bigrams_filtered %>%
+  filter(word2 == "manor") %>%
+  count(title, word1, sort = TRUE)
+##the most common manors are tilford thorpe and birlstone
+
+
+```
+
+4.) [20 pts.] Choose one or two of Doyle’s books and try to divide it/them into meaningful topics.  Are you able to describe any of the topics? Annotate your code and write your answer as annotation in the code.
+
+```{r}
+library(ggplot2)
+library(topicmodels)
+#downloaded a shelock holmes book from the work of the author Doyle
+book <- gutenberg_download(c(108), meta_fields = "title")
+#this code unnest the text to words
+book_words <- book %>%  unnest_tokens(word, text) %>%
+  count(title, word, sort = TRUE) %>% ungroup()
+#get rid of stop words
+doyle_words <- anti_join(book_words, stop_words)
+word_counts.df <- doyle_words %>%
+count(title, word, sort = TRUE) %>%
+ungroup()
+#converts the dataframe doyle_words to document term matrix which is required for topic modeling
+doyle.dtm <- cast_dtm(doyle_words, title, word, n)
+doyle_lda <- LDA(doyle.dtm, k = 2, control = list(seed=1234))
+doyle_lda
+#tidies up the data frame
+doyle_topics <- tidy(doyle_lda, matrix = "beta")
+doyle_topics
+#finds the 10 common terms in each topic 
+doyle_top_terms <- doyle_topics %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta)
+#creates a plot with the 10 most common terms for each topic 
+doyle_top_terms %>%
+  mutate(term = reorder(term, beta)) %>%
+  ggplot(aes(term, beta, fill = factor(topic))) + 
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~topic, scales = "free") + 
+  coord_flip()
+```
